@@ -1,0 +1,23 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+env/
+venv/
+ENV/
+
+# Node / frontend artifacts
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Environment variables / secrets

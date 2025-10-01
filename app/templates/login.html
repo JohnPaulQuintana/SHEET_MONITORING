@@ -1,0 +1,95 @@
+{% extends "base.html" %} {% block title %}Login{% endblock %} {% block content
+%}
+<div class="min-h-screen flex items-center justify-center bg-green-50">
+  <div class="bg-white shadow-lg rounded-2xl p-10 max-w-md w-full">
+    <h2 class="text-3xl font-bold text-green-700 text-center mb-6">Login</h2>
+
+    <form id="loginForm" class="space-y-5">
+      <div>
+        <label>Email</label>
+        <input
+          type="email"
+          id="email"
+          required
+          placeholder="your@email.com"
+          class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400"
+        />
+      </div>
+
+      <div class="relative">
+        <label>Password</label>
+        <input
+          type="password"
+          id="password"
+          required
+          placeholder="Enter password"
+          class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-400"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="w-full py-3 bg-green-600 text-white rounded-lg"
+      >
+        Login
+      </button>
+      <p id="errorMsg" class="text-red-500 text-center mt-2 hidden"></p>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  // Redirect to dashboard if already logged in
+  const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+  if (token) {
+    window.location.href = "/dashboard";
+  }
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBl0GGJM0mZK_MtQNCS0GpkhvtpuDPIfMA",
+    authDomain: "bj-alert.firebaseapp.com",
+    projectId: "bj-alert",
+    storageBucket: "bj-alert.firebasestorage.app",
+    messagingSenderId: "149339289115",
+    appId: "1:149339289115:web:813c82d053e2cc4fa62abe",
+    measurementId: "G-C20NY0NXZM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const errorMsg = document.getElementById("errorMsg");
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const token = await userCredential.user.getIdToken(true);
+
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: token }),
+        credentials: "same-origin"
+      });
+
+      if (res.ok) {
+        window.location.href = "/dashboard";
+      } else {
+        const data = await res.json();
+        errorMsg.textContent = data.detail || "Login failed";
+        errorMsg.classList.remove("hidden");
+      }
+    } catch (err) {
+      errorMsg.textContent = err.message;
+      errorMsg.classList.remove("hidden");
+    }
+  });
+</script>
+
+{% endblock %}

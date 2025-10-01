@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+firebase-admin
+python-dotenv
+fastapi-login 
+python-multipart
+gspread 
+google-auth
