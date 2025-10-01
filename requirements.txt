@@ -1,10 +1,11 @@
 fastapi
-uvicorn
+uvicorn[standard]
 jinja2
 firebase-admin
 python-dotenv
-fastapi-login 
+fastapi-login
 python-multipart
-gspread 
+gspread
 google-auth
 itsdangerous
+google-api-python-client
