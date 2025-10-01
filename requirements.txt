@@ -7,3 +7,4 @@ fastapi-login
 python-multipart
 gspread 
 google-auth
+itsdangerous
