@@ -1,34 +1,42 @@
-<div x-show="activeTab==='add'" x-transition>
-  <form x-ref="addSheetForm" @submit.prevent="submitSheet" class="bg-white p-6 rounded shadow space-y-4">
-
+<div class="bg-white p-2" x-show="activeTab==='add'" x-transition>
+  <div class="">
+    <h1 class="text-2xl font-bold text-green-700 flex items-center gap-1">
+      <i data-lucide="list"></i> Add New Sheet
+    </h1>
+  </div>
+  <form
+    x-ref="addSheetForm"
+    @submit.prevent="submitSheet"
+    class="bg-white p-6 rounded shadow space-y-4"
+  >
     <!-- Sheet Name -->
     <div>
       <label class="block text-gray-700 font-medium mb-1">Sheet Name</label>
-      <input 
-        type="text" 
-        x-model="sheetName" 
-        name="name" 
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500" 
-        required 
+      <input
+        type="text"
+        x-model="sheetName"
+        name="name"
+        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500"
+        required
       />
     </div>
 
     <!-- Sheet URL -->
     <div>
       <label class="block text-gray-700 font-medium mb-1">Sheet URL</label>
-      <input 
-        type="url" 
-        x-model="sheetUrl" 
-        name="url" 
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500" 
-        required 
+      <input
+        type="url"
+        x-model="sheetUrl"
+        name="url"
+        class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500"
+        required
       />
     </div>
 
     <!-- Submit Button with Loader -->
     <div>
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center space-x-2"
         :disabled="submitting"
       >
@@ -37,9 +45,25 @@
 
         <!-- Loader -->
         <span x-show="submitting" class="flex items-center space-x-2">
-          <svg class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          <svg
+            class="animate-spin w-4 h-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
           </svg>
           <span>Submitting...</span>
         </span>
@@ -47,7 +71,10 @@
     </div>
 
     <!-- Error Message -->
-    <p x-show="errorMessage" x-text="errorMessage" class="text-red-500 mt-2"></p>
-
+    <p
+      x-show="errorMessage"
+      x-text="errorMessage"
+      class="text-red-500 mt-2"
+    ></p>
   </form>
 </div>

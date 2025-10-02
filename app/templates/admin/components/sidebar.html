@@ -5,6 +5,25 @@
       <a href="/dashboard" :class="window.location.pathname==='/dashboard'?'bg-green-100 text-green-700':'text-gray-700 hover:bg-green-100'" class="flex items-center px-4 py-2 rounded">
         <i data-lucide="home" class="lucide w-5 h-5 mr-3"></i> Dashboard
       </a>
+
+      <div class="flex flex-col border-b border-gray-200 mb-4">
+        <button
+          @click="activeTab='list'"
+          :class="activeTab==='list' ? 'border-green-500 text-green-600':'text-gray-500'"
+          class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
+        >
+          <i data-lucide="table" class="lucide w-5 h-5"></i>
+          <span>Sheet List</span>
+        </button>
+        <button
+          @click="activeTab='add'"
+          :class="activeTab==='add' ? 'border-green-500 text-green-600':'text-gray-500'"
+          class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
+        >
+          <i data-lucide="plus-circle" class="lucide w-5 h-5"></i>
+          <span>Add New Sheet</span>
+        </button>
+      </div>
     </nav>
     <a href="/auth/logout" class="mt-auto block px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-center">Logout</a>
 </aside>

@@ -1,13 +1,90 @@
-<div class="relative">
+<div
+  class="relative"
+  x-data="{
+        search: '',
+        filterStatus: 'all',
+        get filteredSheets() {
+          return this.sheets.filter(s => {
+            // Calculate days since last modified
+            let days = s.last_modified_dt 
+              ? (new Date() - new Date(s.last_modified_dt)) / (1000*60*60*24) 
+              : Infinity;
+
+            // Determine status
+            let status = days <= 1 ? 'updated' : days <= 3 ? 'recently' : 'outdated';
+
+            // Filter by status
+            if (this.filterStatus !== 'all' && this.filterStatus !== status) return false;
+
+            // Search by query
+            let query = this.search.toLowerCase();
+            return (
+              s.name?.toLowerCase().includes(query) ||
+              s.modified_by?.toLowerCase().includes(query) ||
+              s.modified_email?.toLowerCase().includes(query) ||
+              (s.tabs || []).some(t => t.toLowerCase().includes(query))
+            );
+          });
+        }
+     }"
+>
   <!-- Sheets Grid -->
   <div
     x-show="activeTab==='list'"
     x-transition
-    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white p-2"
   >
-    <template x-for="s in sheets" :key="s.id">
+    <div
+      class="col-span-1 md:col-span-3 flex flex-col md:flex-row items-center justify-between"
+    >
+      <h1
+        class="text-2xl font-bold text-green-700 flex items-center gap-1 w-[300px]"
+      >
+        <i data-lucide="list"></i> Sheet List
+      </h1>
+
+      <!-- Filters + Search -->
       <div
-        class="bg-white border border-gray-200 rounded-3xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition-transform duration-300 flex flex-col overflow-hidden"
+        class="flex flex-wrap items-center gap-2 rounded-md w-full"
+      >
+        <!-- Search -->
+        <input
+          type="text"
+          placeholder="Search sheets..."
+          x-model="search"
+          class="w-full sm:w-1/3 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500"
+        />
+
+        <!-- Filter Dropdown -->
+        <select
+          x-model="filterStatus"
+          class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500"
+        >
+          <option value="all">All</option>
+          <option value="updated">Updated</option>
+          <option value="recently">Recently</option>
+          <option value="outdated">Outdated</option>
+        </select>
+
+        <!-- Legend -->
+        <div class="flex items-center gap-2 ml-auto text-xs font-medium">
+          <span class="px-2 py-1 rounded-full bg-green-600 text-white"
+            >Updated</span
+          >
+          <span class="px-2 py-1 rounded-full bg-yellow-600 text-white"
+            >Recently</span
+          >
+          <span class="px-2 py-1 rounded-full bg-red-600 text-white"
+            >Outdated</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Loop filteredSheets -->
+    <template x-for="s in filteredSheets" :key="s.id">
+      <div
+        class="bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-2xl hover:scale-[1.03] transition-transform duration-300 flex flex-col overflow-hidden"
       >
         <!-- Header -->
         <div
@@ -26,12 +103,10 @@
         >
           <!-- Group 1: Sheet Info -->
           <div class="space-y-3">
-            <div class="flex items-center justify-between border-b border-gray-200 pb-2">
-              <h4
-                class="font-semibold text-gray-800 text-sm"
-              >
-                Sheet Info
-              </h4>
+            <div
+              class="flex items-center justify-between border-b border-gray-200 pb-2"
+            >
+              <h4 class="font-semibold text-gray-800 text-sm">Sheet Info</h4>
               <span
                 :class="{
                   'bg-green-600 text-white': s.last_modified_dt && (new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)<=1,
@@ -61,26 +136,26 @@
               </span>
             </div>
 
+            <!-- Last Modified -->
             <div class="flex items-center space-x-2">
               <i
                 data-lucide="calendar"
                 class="lucide w-5 h-5 text-green-600"
               ></i>
               <div class="flex flex-col">
-                <div class="flex items-center gap-2">
-                  <span class="font-medium text-gray-700">Last Modified</span>
-                </div>
+                <span class="font-medium text-gray-700">Last Modified</span>
                 <span
                   x-text="s.last_modified_dt ? new Date(s.last_modified_dt).toLocaleString() : '-'"
                   :class="{
                     'text-green-700': s.last_modified_dt && (new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)<=1,
+                    'text-yellow-600': s.last_modified_dt && (new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)>1 && (new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)<=3,
                     'text-red-600': !s.last_modified_dt || (new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)>1
                   }"
-                >
-                </span>
+                ></span>
               </div>
             </div>
 
+            <!-- Modified By -->
             <div class="flex items-center space-x-2">
               <i
                 data-lucide="user"
@@ -92,6 +167,7 @@
               </div>
             </div>
 
+            <!-- Email -->
             <div class="flex items-center space-x-2">
               <i
                 data-lucide="mail"
@@ -104,7 +180,7 @@
             </div>
           </div>
 
-          <!-- Group 2: Tabs -->
+          <!-- Tabs -->
           <div>
             <h4
               class="font-semibold text-gray-800 border-b border-gray-200 pb-1 mb-2 text-sm"
@@ -112,42 +188,50 @@
               Tabs
             </h4>
             <div class="flex flex-wrap gap-2">
-              <template x-for="tab in s.tabs || []" :key="tab">
+              <!-- Show only first 5 tabs -->
+              <template
+                x-for="(tab, index) in (s.tabs || []).slice(0,5)"
+                :key="tab"
+              >
                 <span
-                  class="px-2 py-1 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-full text-xs font-medium"
+                  class="px-2 py-1 bg-green-700 text-white rounded-md text-xs font-medium"
                   x-text="tab"
                 ></span>
+              </template>
+
+              <!-- If there are more than 5, show +N more -->
+              <template x-if="s.tabs && s.tabs.length > 5">
+                <span
+                  class="px-2 py-1 bg-gray-300 text-gray-700 rounded-md text-xs font-medium"
+                >
+                  +<span x-text="s.tabs.length - 5"></span> more
+                </span>
               </template>
             </div>
           </div>
 
-          <!-- Group 3: Actions -->
+          <!-- Actions -->
           <div>
             <h4
               class="font-semibold text-gray-800 border-b border-gray-200 pb-1 mb-2 text-sm"
             >
               Actions
             </h4>
-
-            <div
-              class="flex justify-between items-center pt-3 border-t border-gray-100"
-            >
+            <div class="flex justify-end gap-2 items-center">
               <button
                 @click="openHistory(s)"
-                class="text-sm text-blue-600 hover:text-blue-800 hover:underline font-semibold transition-colors"
+                class="bg-gray-200 rounded-md p-2 text-sm text-blue-600 hover:text-blue-800 hover:underline font-semibold transition-colors"
               >
                 View History
               </button>
               <a
                 :href="s.url"
                 target="_blank"
-                class="text-green-600 hover:text-green-800 font-semibold text-sm md:text-base transition-colors"
+                class="bg-green-700 rounded-md p-1 text-white hover:bg-green-800 font-semibold text-sm md:text-base transition-colors"
                 >Open</a
               >
             </div>
           </div>
-
-          <!-- Group 4: Footer -->
         </div>
       </div>
     </template>
