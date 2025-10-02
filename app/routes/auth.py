@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from firebase_admin import auth as firebase_auth
 from app.config import db
 import logging
-import time
+import datetime
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -16,9 +16,9 @@ logger = logging.getLogger("auth")
 logging.basicConfig(level=logging.INFO)
 
 # -----------------------
-# Leeway for token validation (seconds)
+# Session cookie lifetime
 # -----------------------
-TOKEN_LEEWAY = 300  # 5 minutes
+SESSION_DURATION = datetime.timedelta(days=7)  # 7 days
 
 # -----------------------
 # Login page
@@ -28,15 +28,13 @@ def login_page(request: Request):
     token = request.cookies.get("token")
     if token:
         try:
-            # Verify token (skip revoked check for simplicity)
-            decoded = firebase_auth.verify_id_token(token, check_revoked=False)
-            # If valid, redirect to dashboard
+            # Verify Firebase session cookie
+            decoded = firebase_auth.verify_session_cookie(token, check_revoked=False, app=None, clock_tolerance=5)
             return RedirectResponse(url="/dashboard")
         except Exception:
-            # If token invalid/expired, continue to login page
+            # Invalid or expired cookie -> render login
             pass
 
-    # Render login page normally
     return templates.TemplateResponse("login.html", {"request": request})
 
 # -----------------------
@@ -51,47 +49,37 @@ async def login_ajax(request: Request):
         raise HTTPException(status_code=400, detail="ID token required")
 
     try:
-        # Decode Firebase token, skip revocation for smoother handling
-        decoded_token = firebase_auth.verify_id_token(id_token, check_revoked=False)
-        logger.info(f"Decoded token: {decoded_token}")
+        # Create a Firebase session cookie from the ID token
+        session_cookie = firebase_auth.create_session_cookie(
+            id_token, expires_in=SESSION_DURATION
+        )
 
-        # Optional: custom leeway validation
-        now = int(time.time())
-        exp = decoded_token.get("exp", 0)
-        iat = decoded_token.get("iat", 0)
-        if now > exp + TOKEN_LEEWAY:
-            logger.warning("Token expired")
-            raise HTTPException(status_code=401, detail="Token expired. Please login again.")
-        if now < iat - TOKEN_LEEWAY:
-            logger.warning("Token issued in the future")
-            raise HTTPException(status_code=401, detail="Token issued in the future")
-
+        # Decode just for logging/user lookup
+        decoded_token = firebase_auth.verify_id_token(id_token)
         email = decoded_token.get("email")
         uid = decoded_token["uid"]
-        user_doc = db.collection("users").document(uid).get()
 
+        user_doc = db.collection("users").document(uid).get()
         if not user_doc.exists:
             logger.warning(f"Unregistered user login attempt: {email}")
             raise HTTPException(status_code=403, detail="User not registered")
 
         response = JSONResponse({"detail": "Login successful", "user": user_doc.to_dict()})
-        # Set secure HttpOnly cookie for session
+        # Store session cookie in HttpOnly cookie
         response.set_cookie(
             key="token",
-            value=id_token,
+            value=session_cookie,
             httponly=True,
             samesite="lax",
-            max_age=3600  # 1 hour
+            secure=True,
+            max_age=int(SESSION_DURATION.total_seconds()),
         )
         logger.info(f"Login successful for: {email}")
         return response
 
     except firebase_auth.ExpiredIdTokenError:
-        logger.error("Expired token")
+        logger.error("Expired ID token")
         raise HTTPException(status_code=401, detail="Token expired. Please login again.")
-    except firebase_auth.InvalidIdTokenError:
-        logger.error("Invalid token")
-        raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         logger.exception(f"Authentication failed: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
@@ -112,27 +100,23 @@ def logout():
 def require_auth(request: Request):
     token = request.cookies.get("token")
     if not token:
-        # For AJAX, return JSON
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             raise HTTPException(status_code=401, detail="Not authenticated")
         else:
             return RedirectResponse("/auth/login")
 
     try:
-        decoded = firebase_auth.verify_id_token(token, check_revoked=False)
+        decoded = firebase_auth.verify_session_cookie(token, check_revoked=True)
         uid = decoded["uid"]
+
         user_doc = db.collection("users").document(uid).get()
         if not user_doc.exists:
             raise HTTPException(status_code=403, detail="User not registered")
 
         user_data = user_doc.to_dict()
-        # Include uid/email from Firebase token if needed
         user_data["uid"] = uid
         user_data["email"] = decoded.get("email")
         return user_data
 
-    except firebase_auth.ExpiredIdTokenError:
-        raise HTTPException(status_code=401, detail="Token expired. Please login again.")
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
+        raise HTTPException(status_code=401, detail="Invalid or expired session")

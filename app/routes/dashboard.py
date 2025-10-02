@@ -9,6 +9,7 @@ import firebase_admin
 from firebase_admin import auth as firebase_auth, firestore
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
+import requests
 
 # -----------------------
 # Setup
@@ -35,9 +36,8 @@ service_account_info = {
 creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
 drive_service = build("drive", "v3", credentials=creds)
 
-
 # -----------------------
-# Utility: Format Sheets
+# Utility Functions
 # -----------------------
 def format_sheets(sheets_docs):
     sheets = []
@@ -49,13 +49,24 @@ def format_sheets(sheets_docs):
                 last_modified_dt = datetime.fromisoformat(data["last_modified"])
             except Exception:
                 pass
+
         sheets.append({
             "id": doc.id,
             "name": data.get("name"),
             "url": data.get("url"),
             "modified_by": data.get("last_modified_by") or "-",
             "modified_email": data.get("last_modified_email") or "-",
-            "last_modified_dt": last_modified_dt.isoformat() if last_modified_dt else None
+            "last_modified_dt": last_modified_dt.isoformat() if last_modified_dt else None,
+            "status": data.get("status", "unknown"),
+            "tabs": data.get("tabs", []),
+            "history": [
+                {
+                    "modified_dt": h.get("last_modified"),
+                    "modified_by": h.get("last_modified_by"),
+                    "modified_email": h.get("last_modified_email"),
+                    "status": h.get("status")
+                } for h in data.get("history", [])
+            ]
         })
     return sheets
 
@@ -66,7 +77,6 @@ def format_sheets(sheets_docs):
 # -----------------------
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, user: dict = Depends(require_auth)):
-    # If token expired, require_auth may return RedirectResponse
     if isinstance(user, RedirectResponse):
         return user
 
@@ -74,16 +84,12 @@ def dashboard(request: Request, user: dict = Depends(require_auth)):
     role = user.get("role", "user")
 
     if role == "developer":
-        # Fetch Firebase users
-        users_list = []
-        for u in firebase_auth.list_users().iterate_all():
-            users_list.append({
-                "uid": u.uid,
-                "email": u.email,
-                "role": u.custom_claims.get("role") if u.custom_claims else "user"
-            })
+        users_list = [{
+            "uid": u.uid,
+            "email": u.email,
+            "role": u.custom_claims.get("role") if u.custom_claims else "user"
+        } for u in firebase_auth.list_users().iterate_all()]
 
-        # Fetch developer's sheets
         user_sheets_ref = db.collection("sheets").document(uid).collection("user_sheets")
         sheets_docs = user_sheets_ref.stream()
         sheets = format_sheets(sheets_docs)
@@ -103,7 +109,6 @@ def dashboard(request: Request, user: dict = Depends(require_auth)):
             "sheets": sheets
         })
 
-
 # -----------------------
 # Manage Accounts
 # -----------------------
@@ -111,15 +116,12 @@ def dashboard(request: Request, user: dict = Depends(require_auth)):
 def manage_accounts_page(request: Request, user: dict = Depends(require_auth)):
     if user.get("role") != "developer":
         return RedirectResponse("/dashboard")
-    
-    users_list = []
-    page = firebase_auth.list_users().iterate_all()
-    for u in page:
-        users_list.append({
-            "uid": u.uid,
-            "email": u.email,
-            "role": u.custom_claims.get("role") if u.custom_claims else "user"
-        })
+
+    users_list = [{
+        "uid": u.uid,
+        "email": u.email,
+        "role": u.custom_claims.get("role") if u.custom_claims else "user"
+    } for u in firebase_auth.list_users().iterate_all()]
 
     return templates.TemplateResponse("admin/manage_accounts.html", {
         "request": request,
@@ -127,10 +129,6 @@ def manage_accounts_page(request: Request, user: dict = Depends(require_auth)):
         "users": users_list
     })
 
-
-# -----------------------
-# Add Firebase User
-# -----------------------
 @router.post("/dashboard/manage_accounts/add_user")
 async def add_user(email: str = Form(...), password: str = Form(...), role: str = Form(...), user: dict = Depends(require_auth)):
     if user.get("role") != "developer":
@@ -142,121 +140,3 @@ async def add_user(email: str = Form(...), password: str = Form(...), role: str 
     except Exception as e:
         return JSONResponse({"detail": f"Error creating user: {str(e)}"}, status_code=400)
 
-
-# -----------------------
-# Sheets Page
-# -----------------------
-@router.get("/dashboard/online_sheets", response_class=HTMLResponse)
-async def get_sheets(request: Request, user: dict = Depends(require_auth)):
-    uid = user.get("uid")
-    user_sheets_ref = db.collection("sheets").document(uid).collection("user_sheets")
-    sheets_docs = user_sheets_ref.stream()
-    sheets = format_sheets(sheets_docs)
-
-    return templates.TemplateResponse("dashboard_online_sheets.html", {
-        "request": request,
-        "user": user,
-        "sheets": sheets,
-        "users_list": [],
-        "active_users": 0,
-        "now": datetime.utcnow().isoformat(),
-    })
-
-
-# -----------------------
-# Add New Sheet
-# -----------------------
-@router.post("/dashboard/online_sheets/add")
-async def add_sheet(name: str = Form(...), url: str = Form(...), user: dict = Depends(require_auth)):
-    uid = user.get("uid")
-    user_sheets_ref = db.collection("sheets").document(uid).collection("user_sheets")
-
-    # Check duplicate
-    if any(True for _ in user_sheets_ref.where("name", "==", name).stream()):
-        return JSONResponse({"detail": "Sheet with this name already exists"}, status_code=400)
-    if any(True for _ in user_sheets_ref.where("url", "==", url).stream()):
-        return JSONResponse({"detail": "Sheet with this URL already exists"}, status_code=400)
-
-    # Fetch initial metadata
-    meta = get_sheet_metadata(url)
-
-    # Store sheet
-    doc_ref = user_sheets_ref.document()
-    doc_ref.set({
-        "name": name,
-        "url": url,
-        "created_at": datetime.utcnow().isoformat(),
-        "last_modified": meta["modifiedTime"] if meta else None,
-        "last_modified_by": meta["lastUser"] if meta else None,
-        "last_modified_email": meta["lastUserEmail"] if meta else None
-    })
-
-    return JSONResponse({"detail": "Sheet added successfully"})
-
-
-# -----------------------
-# Google Sheet Metadata
-# -----------------------
-def get_sheet_metadata(sheet_url: str):
-    try:
-        sheet_id = sheet_url.split("/d/")[1].split("/")[0]
-    except Exception:
-        return None
-
-    try:
-        file = drive_service.files().get(
-            fileId=sheet_id,
-            fields="modifiedTime,lastModifyingUser"
-        ).execute()
-
-        return {
-            "modifiedTime": file.get("modifiedTime"),
-            "lastUser": file.get("lastModifyingUser", {}).get("displayName"),
-            "lastUserEmail": file.get("lastModifyingUser", {}).get("emailAddress")
-        }
-    except Exception:
-        return None
-
-
-# -----------------------
-# Check Updates Endpoint
-# -----------------------
-@router.get("/dashboard/online_sheets/check_updates")
-async def check_updates(user: dict = Depends(require_auth)):
-    uid = user.get("uid")
-    user_sheets_ref = db.collection("sheets").document(uid).collection("user_sheets")
-    sheets_docs = user_sheets_ref.stream()
-
-    updated_sheets = []
-
-    for doc in sheets_docs:
-        data = doc.to_dict()
-        url = data.get("url")
-        last_modified = data.get("last_modified")
-
-        meta = get_sheet_metadata(url)
-        if not meta:
-            continue
-
-        latest_modified = meta["modifiedTime"]
-
-        if latest_modified and (not last_modified or latest_modified > last_modified):
-            doc.reference.update({
-                "last_modified": latest_modified,
-                "last_modified_by": meta["lastUser"],
-                "last_modified_email": meta["lastUserEmail"],
-                "last_checked": datetime.utcnow().isoformat()
-            })
-            updated_sheets.append({
-                "id": doc.id,
-                "name": data.get("name"),
-                "url": url,
-                "modified_by": meta["lastUser"],
-                "modified_email": meta["lastUserEmail"],
-                "last_modified_dt": latest_modified
-            })
-
-    return JSONResponse({
-        "updated_sheets": updated_sheets,
-        "checked_at": datetime.utcnow().isoformat()
-    })

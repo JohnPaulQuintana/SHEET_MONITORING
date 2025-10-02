@@ -1,380 +1,124 @@
 {% extends "base.html" %} {% block title %}Admin Dashboard{% endblock %} {%
 block content %}
 <div x-data="dashboard()" x-init="init()" class="flex h-screen bg-gray-100">
-  <!-- Mobile Sidebar -->
-  <aside
-    x-show="sidebarOpen"
-    x-transition:enter="transition duration-300 transform"
-    x-transition:enter-start="-translate-x-full"
-    x-transition:enter-end="translate-x-0"
-    x-transition:leave="transition duration-300 transform"
-    x-transition:leave-start="translate-x-0"
-    x-transition:leave-end="-translate-x-full"
-    class="fixed inset-y-0 left-0 w-64 bg-white shadow-md z-50 h-screen overflow-y-auto md:hidden"
-  >
-    <div class="flex flex-col min-h-full p-6">
-      <h2 class="text-2xl font-bold text-green-700 mb-6">Monitoring Panel</h2>
-      <nav class="flex-1 space-y-2">
-        <a
-          href="/dashboard"
-          :class="window.location.pathname === '/dashboard' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'"
-          class="flex items-center px-4 py-2 rounded"
+  <!-- Sidebars -->
+  {% include 'admin/components/mobile_sidebar.html' %} {% include
+  'admin/components/sidebar.html' %}
+
+  <div class="flex-1 flex flex-col overflow-auto p-2">
+    {% include 'admin/components/topbar.html' %} {% include
+    'admin/components/kpi_cards.html' %}
+
+    <!-- Tabs -->
+    <div class="w-full mt-6">
+      <div class="flex border-b border-gray-200 mb-4">
+        <button
+          @click="activeTab='list'"
+          :class="activeTab==='list' ? 'border-green-500 text-green-600':'text-gray-500'"
+          class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
         >
-          <i data-lucide="home" class="lucide w-5 h-5 mr-3"></i> Dashboard
-        </a>
-        <!-- <a href="/dashboard/manage_accounts" 
-         :class="window.location.pathname === '/dashboard/manage_accounts' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'" 
-         class="flex items-center px-4 py-2 rounded">
-        <i data-lucide="users" class="lucide w-5 h-5 mr-3"></i> Manage Accounts
-      </a>
-      <a href="/dashboard/online_sheets" 
-         :class="window.location.pathname === '/dashboard/online_sheets' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'" 
-         class="flex items-center px-4 py-2 rounded">
-        <i data-lucide="table" class="lucide w-5 h-5 mr-3"></i> Online Sheets
-      </a> -->
-        <div class="grid grid-cols-1 gap-2 mt-2 w-full">
-          <div
-            class="bg-white rounded-xl shadow transition-transform duration-200 flex items-center space-x-3 p-4"
-          >
-            <div class="p-2 bg-green-100 rounded-full">
-              <i data-lucide="table" class="lucide w-5 h-5 text-green-600"></i>
-            </div>
-            <div>
-              <p class="text-gray-500">Total Sheets</p>
-              <h2 class="text-2xl font-bold" x-text="sheets.length"></h2>
-            </div>
-          </div>
-          <div
-            class="bg-white rounded-xl shadow transition-transform duration-200 flex items-center space-x-3 p-4"
-          >
-            <div class="p-2 bg-blue-100 rounded-full">
-              <i data-lucide="clock" class="lucide w-5 h-5 text-blue-600"></i>
-            </div>
-            <div>
-              <p class="text-gray-500">Recently Modified</p>
-              <h2
-                class="text-2xl font-bold"
-                x-text="sheets.filter(s => s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <= 1).length"
-              ></h2>
-            </div>
-          </div>
-          <!-- <div class="bg-white rounded-xl shadow hover:shadow-lg hover:scale-[1.02] transition-transform duration-200 flex items-center space-x-3 p-4">
-          <div class="p-2 bg-purple-100 rounded-full">
-            <i data-lucide="users" class="lucide w-6 h-6 text-purple-600"></i>
-          </div>
-          <div>
-            <p class="text-gray-500">Active Users</p>
-            <h2 class="text-2xl font-bold" x-text="active_users"></h2>
-          </div>
-        </div> -->
-        </div>
-      </nav>
-      <a
-        href="/auth/logout"
-        class="mt-auto block px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-center"
-        >Logout</a
-      >
-    </div>
-  </aside>
-
-  <!-- Mobile Overlay -->
-  <div
-    x-show="sidebarOpen"
-    x-transition.opacity
-    @click="sidebarOpen = false"
-    class="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
-  ></div>
-
-  <!-- Desktop Sidebar -->
-  <aside
-    class="hidden md:flex md:flex-col w-64 bg-white shadow-md h-screen overflow-y-auto"
-  >
-    <div class="flex flex-col min-h-full p-6">
-      <h2 class="text-2xl font-bold text-green-700 mb-6">Monitoring Panel</h2>
-      <nav class="flex-1 space-y-2">
-        <a
-          href="/dashboard"
-          :class="window.location.pathname === '/dashboard' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'"
-          class="flex items-center px-4 py-2 rounded"
+          <i data-lucide="table" class="lucide w-5 h-5"></i>
+          <span>Sheet List</span>
+        </button>
+        <button
+          @click="activeTab='add'"
+          :class="activeTab==='add' ? 'border-green-500 text-green-600':'text-gray-500'"
+          class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
         >
-          <i data-lucide="home" class="lucide w-5 h-5 mr-3"></i> Dashboard
-        </a>
-        <!-- <a href="/dashboard/manage_accounts" 
-         :class="window.location.pathname === '/dashboard/manage_accounts' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'" 
-         class="flex items-center px-4 py-2 rounded">
-        <i data-lucide="users" class="lucide w-5 h-5 mr-3"></i> Manage Accounts
-      </a>
-      <a href="/dashboard/online_sheets" 
-         :class="window.location.pathname === '/dashboard/online_sheets' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-green-100'" 
-         class="flex items-center px-4 py-2 rounded">
-        <i data-lucide="table" class="lucide w-5 h-5 mr-3"></i> Online Sheets
-      </a> -->
-        <!-- KPI Cards -->
-
-        <div class="grid grid-cols-1 gap-2 mt-2 w-full">
-          <div
-            class="bg-white rounded-xl shadow transition-transform duration-200 flex items-center space-x-3 p-4"
-          >
-            <div class="p-2 bg-green-100 rounded-full">
-              <i data-lucide="table" class="lucide w-5 h-5 text-green-600"></i>
-            </div>
-            <div>
-              <p class="text-gray-500">Total Sheets</p>
-              <h2 class="text-2xl font-bold" x-text="sheets.length"></h2>
-            </div>
-          </div>
-          <div
-            class="bg-white rounded-xl shadow transition-transform duration-200 flex items-center space-x-3 p-4"
-          >
-            <div class="p-2 bg-blue-100 rounded-full">
-              <i data-lucide="clock" class="lucide w-5 h-5 text-blue-600"></i>
-            </div>
-            <div>
-              <p class="text-gray-500">Recently Modified</p>
-              <h2
-                class="text-2xl font-bold"
-                x-text="sheets.filter(s => s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <= 1).length"
-              ></h2>
-            </div>
-          </div>
-          <!-- <div class="bg-white rounded-xl shadow hover:shadow-lg hover:scale-[1.02] transition-transform duration-200 flex items-center space-x-3 p-4">
-          <div class="p-2 bg-purple-100 rounded-full">
-            <i data-lucide="users" class="lucide w-6 h-6 text-purple-600"></i>
-          </div>
-          <div>
-            <p class="text-gray-500">Active Users</p>
-            <h2 class="text-2xl font-bold" x-text="active_users"></h2>
-          </div>
-        </div> -->
-        </div>
-      </nav>
-      <a
-        href="/auth/logout"
-        class="mt-auto block px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-center"
-        >Logout</a
-      >
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <div class="flex-1 flex flex-col">
-    <!-- Top Bar -->
-    <header
-      class="flex items-center justify-between bg-white shadow px-4 py-3 md:px-6 md:py-4 sticky top-0 z-20"
-    >
-      <!-- Mobile Sidebar Toggle -->
-      <button
-        @click="sidebarOpen = !sidebarOpen"
-        class="md:hidden text-gray-600 focus:outline-none"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
-
-      <!-- App Title / Purpose -->
-      <div class="flex items-center space-x-2">
-        <i data-lucide="monitor" class="lucide w-6 h-6 text-green-600"></i>
-        <h1 class="text-lg md:text-xl font-bold text-gray-800">
-          Monitoring Online Sheets
-        </h1>
+          <i data-lucide="plus-circle" class="lucide w-5 h-5"></i>
+          <span>Add New Sheet</span>
+        </button>
       </div>
 
-      <!-- Welcome Message -->
-      <div class="flex items-center space-x-4">
-        <p class="font-semibold text-gray-700">Hello, {{ user.email }}</p>
-      </div>
-    </header>
+      <!-- Sheet List -->
+      {% include 'admin/components/sheet_list.html' %}
 
-    <!-- Scrollable Content -->
-    <div class="flex-1 overflow-auto p-2 md:p-4">
-      <!-- Tabs -->
-      <div class="w-full mt-6">
-        <div class="flex border-b border-gray-200 mb-4">
-          <button
-            @click="activeTab = 'list'"
-            :class="activeTab === 'list' ? 'border-green-500 text-green-600' : 'text-gray-500'"
-            class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
-          >
-            <i data-lucide="table" class="lucide w-5 h-5"></i>
-            <span>Sheet List</span>
-          </button>
-          <button
-            @click="activeTab = 'add'"
-            :class="activeTab === 'add' ? 'border-green-500 text-green-600' : 'text-gray-500'"
-            class="px-4 py-2 -mb-px border-b-2 font-medium flex items-center space-x-2"
-          >
-            <i data-lucide="plus-circle" class="lucide w-5 h-5"></i>
-            <span>Add New Sheet</span>
-          </button>
-        </div>
-
-        <!-- Sheet List -->
-        <div
-          x-show="activeTab === 'list'"
-          x-transition
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          <template x-for="s in sheets" :key="s.id">
-            <div
-              class="bg-white border border-gray-200 rounded-3xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-transform duration-200 flex flex-col overflow-hidden"
-            >
-              <div
-                class="px-6 py-2 border-b bg-green-700 text-white flex items-center space-x-2"
-              >
-                <i data-lucide="file-text" class="lucide w-7 h-7 shrink-0"></i>
-                <h3 class="text-lg md:text-xl font-bold" x-text="s.name"></h3>
-              </div>
-              <div
-                class="p-6 flex-1 flex flex-col justify-between space-y-5 text-gray-700 text-sm overflow-hidden"
-              >
-                <div class="space-y-3">
-                  <div class="flex items-center space-x-2">
-                    <i
-                      data-lucide="calendar"
-                      class="lucide w-5 h-5 text-green-700"
-                    ></i>
-                    <p class="flex flex-col">
-                      <span class="font-semibold text-gray-800"
-                        >Last Modified:</span
-                      >
-                      <span
-                        x-text="s.last_modified_dt ? new Date(s.last_modified_dt).toLocaleString() : '-'"
-                        :class="{
-                          'text-green-700': s.last_modified_dt && (new Date() - new Date(s.last_modified_dt)) / (1000*60*60*24) <= 1,
-                          'text-red-600': !s.last_modified_dt || (new Date() - new Date(s.last_modified_dt)) / (1000*60*60*24) > 1
-                        }"
-                      ></span>
-                    </p>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <i
-                      data-lucide="user"
-                      class="lucide w-5 h-5 text-green-700 shrink-0"
-                    ></i>
-                    <p class="flex flex-col">
-                      <span class="font-semibold text-gray-800"
-                        >Modified By:</span
-                      >
-                      <span x-text="s.modified_by || '-'"></span>
-                    </p>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <i
-                      data-lucide="mail"
-                      class="lucide w-5 h-5 text-green-700 shrink-0"
-                    ></i>
-                    <p class="flex flex-col">
-                      <span class="font-semibold text-gray-800"
-                        >Modified Email:</span
-                      >
-                      <span x-text="s.modified_email || '-'"></span>
-                    </p>
-                  </div>
-                </div>
-                <div
-                  class="flex justify-between items-center pt-3 border-t border-gray-100"
-                >
-                  <span
-                    :class="{
-                        'bg-green-100 text-green-800': s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <= 1,
-                        'bg-yellow-100 text-yellow-800': s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) > 1 && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <=3,
-                        'bg-red-100 text-red-800': !s.last_modified_dt || (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) > 3
-                      }"
-                    class="px-3 py-1 text-xs md:text-sm rounded-full font-medium shadow-sm whitespace-nowrap"
-                    x-text="s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <= 1
-                        ? 'Updated Today'
-                        : s.last_modified_dt && (new Date() - new Date(s.last_modified_dt))/(1000*60*60*24) <= 3
-                        ? 'Updated Recently'
-                        : 'Outdated'"
-                  ></span>
-                  <a
-                    :href="s.url"
-                    target="_blank"
-                    class="text-blue-600 hover:underline font-medium text-sm md:text-base"
-                    >Open</a
-                  >
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Add Sheet Tab -->
-        <div x-show="activeTab === 'add'" x-transition>
-          <form
-            x-ref="addSheetForm"
-            @submit.prevent="submitSheet"
-            class="bg-white p-6 rounded shadow space-y-4"
-          >
-            <div>
-              <label class="block text-gray-700 font-medium mb-1"
-                >Sheet Name</label
-              >
-              <input
-                type="text"
-                x-model="sheetName"
-                name="name"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500"
-                required
-              />
-            </div>
-            <div>
-              <label class="block text-gray-700 font-medium mb-1"
-                >Sheet URL</label
-              >
-              <input
-                type="url"
-                x-model="sheetUrl"
-                name="url"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-green-500 focus:border-green-500"
-                required
-              />
-            </div>
-            <div>
-              <button
-                type="submit"
-                class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                Add Sheet
-              </button>
-            </div>
-            <p
-              x-show="errorMessage"
-              x-text="errorMessage"
-              class="text-red-500 mt-2"
-            ></p>
-          </form>
-        </div>
-      </div>
+      <!-- Add Sheet Form -->
+      {% include 'admin/components/add_sheet_form.html' %}
     </div>
   </div>
 
-  <!-- Popup -->
+  <!-- Success/Error Popup (bottom-right toast) -->
+  {% include 'admin/components/popup.html' %}
+
+  <!-- History Modal -->
   <div
-    x-show="popupMessage"
-    x-transition:enter="transition transform ease-out duration-300"
-    x-transition:enter-start="opacity-0 -translate-y-2"
-    x-transition:enter-end="opacity-100 translate-y-0"
-    x-transition:leave="transition transform ease-in duration-300"
-    x-transition:leave-start="opacity-100 translate-y-0"
-    x-transition:leave-end="opacity-0 -translate-y-2"
-    x-text="popupMessage"
-    :class="popupType === 'success' ? 'bg-green-500' : 'bg-red-500'"
-    class="fixed top-6 right-6 text-white px-4 py-3 rounded shadow-lg z-50"
-    x-cloak
-  ></div>
+    x-show="historySheet"
+    x-transition.opacity.duration.300ms
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+  >
+    <div
+      class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6 relative animate-fadeIn"
+    >
+      <!-- Close Button -->
+      <button
+        @click="historySheet=null"
+        class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
+      >
+        <i data-lucide="x" class="lucide w-6 h-6"></i>
+      </button>
+
+      <!-- Modal Title -->
+      <h3
+        class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700"
+        x-text="historySheet ? historySheet.name + ' - History' : ''"
+      ></h3>
+
+      <!-- History Table -->
+      <template
+        x-if="historySheet && historySheet.history && historySheet.history.length > 0"
+      >
+        <div class="overflow-auto">
+          <table class="w-full border-collapse rounded-lg shadow-sm">
+            <thead>
+              <tr
+                class="bg-gradient-to-r from-green-600 to-green-500 text-white"
+              >
+                <th class="px-4 py-2 text-left text-sm font-semibold">
+                  Date Modified
+                </th>
+                <th class="px-4 py-2 text-left text-sm font-semibold">
+                  Modified By
+                </th>
+                <th class="px-4 py-2 text-left text-sm font-semibold">Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template
+                x-for="h in historySheet.history.slice().sort((a,b)=>new Date(b.modified_dt)-new Date(a.modified_dt))"
+                :key="h.modified_dt"
+              >
+                <tr
+                  class="bg-white hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                >
+                  <td
+                    class="px-4 py-2 text-sm text-green-700 font-semibold"
+                    x-text="new Date(h.modified_dt).toLocaleString()"
+                  ></td>
+                  <td
+                    class="px-4 py-2 text-sm text-gray-700"
+                    x-text="h.modified_by || '-'"
+                  ></td>
+                  <td
+                    class="px-4 py-2 text-sm text-gray-700"
+                    x-text="h.modified_email || '-'"
+                  ></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <template
+        x-if="!historySheet || !historySheet.history || historySheet.history.length===0"
+      >
+        <div class="text-gray-400 text-center text-sm italic py-4">
+          No history available
+        </div>
+      </template>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -389,75 +133,91 @@ block content %}
       active_users: {{ active_users | default(0) }},
       now: '{{ now }}',
 
+      // Submission Loader
+      submitting: false,
+
+      // History Modal
+      historySheet: null,
+      openHistory(sheet) {
+        this.historySheet = sheet;
+      },
+
+      // Popup Notification (success/error only)
       popupMessage: '',
       popupType: 'success',
+      popupTitle: '',
+      showPopup(message, type='success', title='') {
+        this.popupMessage = message;
+        this.popupType = type;
+        this.popupTitle = title;
+        setTimeout(()=>this.popupMessage='',5000);
+      },
 
+      // Add New Sheet with loader & spam prevention
       async submitSheet() {
+        if (this.submitting) return; // prevent multiple clicks
+        this.submitting = true;
         this.errorMessage = '';
+
         try {
           let formData = new FormData(this.$refs.addSheetForm);
-          let response = await fetch('/dashboard/online_sheets/add', {
-            method: 'POST',
-            body: formData
-          });
+          let response = await fetch('/dashboard/online_sheets/add', { method: 'POST', body: formData });
           let data = await response.json();
+
           if (!response.ok) {
-            this.showPopup(data.detail || 'Error adding sheet', 'error');
+            this.showPopup(data.detail || 'Error adding sheet','error');
             return;
           }
 
-          // Add new sheet immediately
           this.sheets.push({
-            id: data.id,
+            id: data.id || crypto.randomUUID(),
             name: this.sheetName,
             url: this.sheetUrl,
-            last_modified_dt: data.last_modified_dt || new Date().toISOString(),
+            last_modified_dt: data.last_modified || new Date().toISOString(),
             modified_by: '{{ user.email }}',
-            modified_email: '{{ user.email }}'
+            modified_email: '{{ user.email }}',
+            tabs: data.tabs || []
           });
 
           this.sheetName = '';
           this.sheetUrl = '';
-          this.showPopup('Sheet added successfully!', 'success');
-          this.activeTab = 'list';
+          this.showPopup('Sheet added successfully!', 'success', 'New Sheet');
+          this.activeTab='list';
           lucide.createIcons();
-
         } catch (err) {
           console.error(err);
           this.showPopup('Network error', 'error');
+        } finally {
+          this.submitting = false; // reset loader
         }
       },
 
-      showPopup(message, type = 'success') {
-        this.popupMessage = message;
-        this.popupType = type;
-        setTimeout(() => this.popupMessage = '', 3000);
-      },
-
-      async refreshSheets() {
+      // Refresh Sheets from server
+      async refreshSheets(){
         try {
           const response = await fetch('/dashboard/online_sheets/check_updates');
           const updates = await response.json();
-          if (!updates.updated_sheets) return;
-          updates.updated_sheets.forEach(s => {
+          if(!updates.updated_sheets) return;
+          updates.updated_sheets.forEach(s=>{
             const idx = this.sheets.findIndex(sheet => sheet.id === s.id);
-            if (idx === -1) {
-              this.sheets.push({ ...s, last_modified_dt: s.last_modified_dt || '', modified_by: s.modified_by || '', modified_email: s.modified_email || '' });
+            if(idx===-1) {
+              this.sheets.push({...s,last_modified_dt:s.last_modified_dt||'',modified_by:s.modified_by||'',modified_email:s.modified_email||'',tabs:s.tabs||[]});
             } else {
-              this.sheets[idx] = { ...this.sheets[idx], ...s };
+              this.sheets[idx] = {...this.sheets[idx], ...s, tabs:s.tabs||[]};
             }
           });
           lucide.createIcons();
-        } catch (err) {
-          console.error('Error refreshing sheets', err);
+        } catch(err){
+          console.error('Error refreshing sheets',err);
         }
       },
 
-      init() {
+      init(){
         lucide.createIcons();
-        setInterval(() => { this.refreshSheets() }, 60000);
+        setInterval(()=>{this.refreshSheets()},60000);
       }
     }
   }
 </script>
+
 {% endblock %}

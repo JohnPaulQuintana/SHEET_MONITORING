@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
-from app.routes import auth, dashboard
+from app.routes import auth, dashboard, sheets
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="super-secret-key")
 
 app.include_router(auth.router, prefix="/auth")
 app.include_router(dashboard.router)
+app.include_router(sheets.router)
 
 # Redirect 401 Unauthorized to login page
 @app.exception_handler(HTTPException)

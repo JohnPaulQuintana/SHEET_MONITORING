@@ -1,0 +1,20 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2 w-full">
+  <div class="bg-white rounded-xl shadow flex items-center space-x-3 p-4">
+    <div class="p-2 bg-green-100 rounded-full">
+      <i data-lucide="table" class="lucide w-5 h-5 text-green-600"></i>
+    </div>
+    <div>
+      <p class="text-gray-500">Total Sheets</p>
+      <h2 class="text-2xl font-bold" x-text="sheets.length"></h2>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow flex items-center space-x-3 p-4">
+    <div class="p-2 bg-blue-100 rounded-full">
+      <i data-lucide="clock" class="lucide w-5 h-5 text-blue-600"></i>
+    </div>
+    <div>
+      <p class="text-gray-500">Recently Modified</p>
+      <h2 class="text-2xl font-bold" x-text="sheets.filter(s=>s.last_modified_dt&&(new Date()-new Date(s.last_modified_dt))/(1000*60*60*24)<=1).length"></h2>
+    </div>
+  </div>
+</div>
