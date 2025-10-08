@@ -136,8 +136,9 @@ async def add_sheet(name: str = Form(...), url: str = Form(...), user: dict = De
     # Check duplicate
     if any(True for _ in user_sheets_ref.where("name", "==", name).stream()):
         return JSONResponse({"detail": "Sheet with this name already exists"}, status_code=400)
-    if any(True for _ in user_sheets_ref.where("url", "==", normalized_url).stream()):
-        return JSONResponse({"detail": "Sheet with this URL already exists"}, status_code=400)
+    
+    # if any(True for _ in user_sheets_ref.where("url", "==", normalized_url).stream()):
+    #     return JSONResponse({"detail": "Sheet with this URL already exists"}, status_code=400)
 
     meta = get_sheet_metadata(normalized_url)
     reachable = is_sheet_reachable(normalized_url)

@@ -120,6 +120,26 @@
         this.popupTitle = title;
         setTimeout(() => this.popupMessage = '', 5000);
       },
+      usersWhoUpdatedToday() {
+        const counts = {};
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+        this.sheets.forEach(s => {
+          if (s.last_modified_dt) {
+            const modDate = new Date(s.last_modified_dt).toISOString().split('T')[0];
+            if (modDate === today) {
+              const user = s.modified_by || s.modified_email;
+              if (user) {
+                counts[user] = (counts[user] || 0) + 1;
+              }
+            }
+          }
+        });
+
+        return Object.entries(counts)
+          .map(([user, count]) => ({ user, count }))
+          .sort((a, b) => b.count - a.count);
+      },
 
       async submitSheet() {
         if (this.submitting) return;
