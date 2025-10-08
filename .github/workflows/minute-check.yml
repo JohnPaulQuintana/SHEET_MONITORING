@@ -34,7 +34,7 @@ jobs:
           cat $LOG_FILE
 
       - name: Upload log artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: minute-check-log
           path: minute_check_log.txt
