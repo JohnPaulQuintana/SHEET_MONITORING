@@ -1,15 +1,40 @@
-name: Every Minute Sheet Check
+name: Every Minute Sheet Check with Logs
 
 on:
   schedule:
-    - cron: "* * * * *"  # ⏱️ Runs every minute (UTC)
-  workflow_dispatch:       # Manual trigger for testing
+    - cron: "* * * * *"  # Runs every minute UTC
+  workflow_dispatch:       # Manual trigger
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Send request to check_updates endpoint
+      - name: Log trigger timestamp
         run: |
-          echo "Triggered at $(date -u)"
-          curl -X GET "https://sheet-monitoring.onrender.com/dashboard/online_sheets/check_updates_all" -v
+          echo "Workflow triggered at UTC: $(date -u)"
+
+      - name: Send request and capture response
+        run: |
+          RESPONSE_FILE="response.json"
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o $RESPONSE_FILE \
+            -X GET "https://sheet-monitoring.onrender.com/dashboard/online_sheets/check_updates_all")
+          
+          echo "HTTP Response code: $HTTP_CODE"
+          echo "Response body:"
+          cat $RESPONSE_FILE
+
+      - name: Append to local log file
+        run: |
+          LOG_FILE="minute_check_log.txt"
+          echo "$(date -u) - Triggered workflow" >> $LOG_FILE
+          echo "$(date -u) - HTTP code: $HTTP_CODE" >> $LOG_FILE
+          echo "$(date -u) - Response body:" >> $LOG_FILE
+          cat response.json >> $LOG_FILE
+          echo "--------------------------" >> $LOG_FILE
+          cat $LOG_FILE
+
+      - name: Upload log artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: minute-check-log
+          path: minute_check_log.txt

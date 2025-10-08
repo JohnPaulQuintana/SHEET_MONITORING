@@ -231,11 +231,15 @@ async def check_updates(user: dict = Depends(require_auth)):
     })
 
 
-@router.get("/dashboard/online_sheets/check_updates_all", tags=["Sheets"], summary="Public check for all user sheets")
+@router.get(
+    "/dashboard/online_sheets/check_updates_all",
+    tags=["Sheets"],
+    summary="Public check for all user sheets"
+)
 async def check_all_user_sheets():
     """Public endpoint to check updates for all users' Google Sheets."""
     users_ref = db.collection("sheets").stream()
-    all_updates = []
+    processed_sheets = []
 
     for user_doc in users_ref:
         uid = user_doc.id
@@ -278,22 +282,27 @@ async def check_all_user_sheets():
                     update_data["history"] = history
                     updated = True
 
+            # Update Firestore if needed
             if updated or status != update_data["status"] or data.get("tabs", []) != tabs:
                 doc.reference.update(update_data)
-                all_updates.append({
-                    "uid": uid,
-                    "sheet_id": doc.id,
-                    "name": data.get("name"),
-                    "url": url,
-                    "modified_by": update_data.get("last_modified_by"),
-                    "modified_email": update_data.get("last_modified_email"),
-                    "status": update_data["status"],
-                    "last_modified_dt": update_data.get("last_modified"),
-                    "tabs": tabs
-                })
+
+            # Add every sheet to the processed list, not just updated ones
+            processed_sheets.append({
+                "uid": uid,
+                "sheet_id": doc.id,
+                "name": data.get("name"),
+                "url": url,
+                "modified_by": update_data.get("last_modified_by"),
+                "modified_email": update_data.get("last_modified_email"),
+                "status": update_data["status"],
+                "last_modified_dt": update_data.get("last_modified"),
+                "tabs": tabs,
+                "last_checked": update_data["last_checked"],
+                "updated": updated
+            })
 
     return JSONResponse({
         "checked_at": datetime.utcnow().isoformat(),
-        "total_updates": len(all_updates),
-        "updated_sheets": all_updates
+        "total_sheets_processed": len(processed_sheets),
+        "sheets": processed_sheets
     })
