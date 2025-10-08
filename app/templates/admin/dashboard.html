@@ -12,7 +12,10 @@
 
     <!-- Tabs -->
     <div class="w-full mt-2">
+      <!-- Sheet List -->
       {% include 'admin/components/sheet_list.html' %}
+
+      <!-- Add Sheet Form -->
       {% include 'admin/components/add_sheet_form.html' %}
     </div>
   </div>
@@ -21,18 +24,32 @@
   {% include 'admin/components/popup.html' %}
 
   <!-- History Modal -->
-  <div x-show="historySheet"
-       x-transition.opacity.duration.300ms
-       class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6 relative animate-fadeIn">
-      <button @click="historySheet=null" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors">
-        <i data-lucide="x" x-init="lucide.createIcons()" class="lucide w-6 h-6"></i>
+  <div
+    x-show="historySheet"
+    x-transition.opacity.duration.300ms
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+  >
+    <div
+      class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6 relative animate-fadeIn"
+    >
+      <!-- Close Button -->
+      <button
+        @click="historySheet=null"
+        class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
+      >
+        <i data-lucide="x" class="lucide w-6 h-6"></i>
       </button>
 
-      <h3 class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700"
-          x-text="historySheet ? historySheet.name + ' - History' : ''"></h3>
+      <!-- Modal Title -->
+      <h3
+        class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700"
+        x-text="historySheet ? historySheet.name + ' - History' : ''"
+      ></h3>
 
-      <template x-if="historySheet && historySheet.history && historySheet.history.length > 0">
+      <!-- History Table -->
+      <template
+        x-if="historySheet && historySheet.history && historySheet.history.length > 0"
+      >
         <div class="overflow-auto">
           <table class="w-full border-collapse rounded-lg shadow-sm">
             <thead>
@@ -43,8 +60,10 @@
               </tr>
             </thead>
             <tbody>
-              <template x-for="h in historySheet.history.slice().sort((a,b)=>new Date(b.modified_dt)-new Date(a.modified_dt))"
-                        :key="h.modified_dt">
+              <template
+                x-for="h in historySheet.history.slice().sort((a,b)=>new Date(b.modified_dt)-new Date(a.modified_dt))"
+                :key="h.modified_dt"
+              >
                 <tr class="bg-white hover:bg-gray-50 transition-colors border-b last:border-b-0">
                   <td class="px-4 py-2 text-sm text-green-700 font-semibold" x-text="new Date(h.modified_dt).toLocaleString()"></td>
                   <td class="px-4 py-2 text-sm text-gray-700" x-text="h.modified_by || '-'"></td>
@@ -56,121 +75,139 @@
         </div>
       </template>
 
-      <template x-if="!historySheet || !historySheet.history || historySheet.history.length === 0">
-        <div class="text-gray-400 text-center text-sm italic py-4">No history available</div>
+      <template
+        x-if="!historySheet || !historySheet.history || historySheet.history.length===0"
+      >
+        <div class="text-gray-400 text-center text-sm italic py-4">
+          No history available
+        </div>
       </template>
     </div>
   </div>
 </div>
 
 <script>
-function dashboard() {
-  return {
-    sidebarOpen: false,
-    activeTab: 'list',
-    sheetName: '',
-    sheetUrl: '',
-    errorMessage: '',
-    sheets: {{ sheets | tojson | safe }} || [],
-    active_users: {{ active_users | default(0) }},
-    now: '{{ now }}',
+  function refreshIcons() {
+    document.querySelectorAll('[data-lucide]').forEach(el => el.innerHTML = '');
+    lucide.createIcons();
+  }
 
-    submitting: false,
-    refreshing: false,
+  function dashboard() {
+    return {
+      sidebarOpen: false,
+      activeTab: 'list',
+      sheetName: '',
+      sheetUrl: '',
+      errorMessage: '',
+      sheets: {{ sheets | tojson | safe }} || [],
+      active_users: {{ active_users | default(0) }},
+      now: '{{ now }}',
 
-    historySheet: null,
-    openHistory(sheet) { this.historySheet = sheet },
+      submitting: false,
+      refreshing: false,
 
-    popupMessage: '',
-    popupType: 'success',
-    popupTitle: '',
-    showPopup(message, type='success', title='') {
-      this.popupMessage = message;
-      this.popupType = type;
-      this.popupTitle = title;
-      setTimeout(() => this.popupMessage = '', 5000);
-    },
+      historySheet: null,
+      openHistory(sheet) {
+        this.historySheet = sheet;
+      },
 
-    async submitSheet() {
-      if (this.submitting) return;
-      this.submitting = true;
-      this.errorMessage = '';
+      popupMessage: '',
+      popupType: 'success',
+      popupTitle: '',
+      showPopup(message, type='success', title='') {
+        this.popupMessage = message;
+        this.popupType = type;
+        this.popupTitle = title;
+        setTimeout(() => this.popupMessage = '', 5000);
+      },
 
-      try {
-        const formData = new FormData(this.$refs.addSheetForm);
-        const response = await fetch('/dashboard/online_sheets/add', { method: 'POST', body: formData });
-        const data = await response.json();
+      async submitSheet() {
+        if (this.submitting) return;
+        this.submitting = true;
+        this.errorMessage = '';
 
-        if (!response.ok) {
-          this.showPopup(data.detail || 'Error adding sheet', 'error');
-          return;
+        try {
+          let formData = new FormData(this.$refs.addSheetForm);
+          let response = await fetch('/dashboard/online_sheets/add', { method: 'POST', body: formData });
+          let data = await response.json();
+
+          if (!response.ok) {
+            this.showPopup(data.detail || 'Error adding sheet', 'error');
+            return;
+          }
+
+          this.sheets = [
+            ...this.sheets,
+            {
+              id: data.id || crypto.randomUUID(),
+              name: this.sheetName,
+              url: this.sheetUrl,
+              last_modified_dt: data.last_modified || new Date().toISOString(),
+              modified_by: '{{ user.email }}',
+              modified_email: '{{ user.email }}',
+              tabs: data.tabs || []
+            }
+          ];
+
+          this.sheetName = '';
+          this.sheetUrl = '';
+          this.activeTab = 'list';
+
+          this.$nextTick(() => refreshIcons());
+          this.showPopup('Sheet added successfully!', 'success', 'New Sheet');
+        } catch (err) {
+          console.error(err);
+          this.showPopup('Network error', 'error');
+        } finally {
+          this.submitting = false;
         }
+      },
 
-        this.sheets.push({
-          id: data.id || crypto.randomUUID(),
-          name: this.sheetName,
-          url: this.sheetUrl,
-          last_modified_dt: data.last_modified || new Date().toISOString(),
-          modified_by: '{{ user.email }}',
-          modified_email: '{{ user.email }}',
-          tabs: data.tabs || []
-        });
+      async refreshSheets() {
+        if (this.refreshing) return;
+        this.refreshing = true;
 
-        this.sheetName = '';
-        this.sheetUrl = '';
-        this.showPopup('Sheet added successfully!', 'success', 'New Sheet');
-        this.activeTab = 'list';
-      } catch (err) {
-        console.error(err);
-        this.showPopup('Network error', 'error');
-      } finally {
-        this.submitting = false;
-      }
-    },
+        try {
+          const response = await fetch('/dashboard/online_sheets/check_updates');
+          if (!response.ok) throw new Error('Failed to refresh');
+          const updates = await response.json();
 
-    async refreshSheets() {
-      if (this.refreshing) return;
-      this.refreshing = true;
+          if (updates.updated_sheets) {
+            updates.updated_sheets.forEach(s => {
+              const idx = this.sheets.findIndex(sheet => sheet.id === s.id);
+              if (idx === -1) {
+                this.sheets = [...this.sheets, {
+                  ...s,
+                  last_modified_dt: s.last_modified_dt || '',
+                  modified_by: s.modified_by || '',
+                  modified_email: s.modified_email || '',
+                  tabs: s.tabs || []
+                }];
+              } else {
+                this.sheets.splice(idx, 1, {
+                  ...this.sheets[idx],
+                  ...s,
+                  tabs: s.tabs || []
+                });
+              }
+            });
 
-      try {
-        const response = await fetch('/dashboard/online_sheets/check_updates_all');
-        if (!response.ok) throw new Error('Failed to refresh');
-
-        const data = await response.json();
-        if (data.updated_sheets) {
-          // Fully replace sheets array to avoid duplicates
-          this.sheets = data.updated_sheets.map(s => ({
-            ...s,
-            last_modified_dt: s.last_modified_dt || '',
-            modified_by: s.modified_by || '',
-            modified_email: s.modified_email || '',
-            tabs: s.tabs || []
-          }));
+            this.$nextTick(() => refreshIcons());
+          }
+        } catch (err) {
+          console.error('Error refreshing sheets', err);
+        } finally {
+          this.refreshing = false;
         }
+      },
 
-        // Initialize icons for new elements only
-        this.$nextTick(() => {
-          this.sheets.forEach(sheet => {
-            const icons = document.querySelectorAll(`[data-lucide]`);
-            icons.forEach(icon => lucide.createIcons({ icons: [icon] }));
-          });
-        });
-
-      } catch(err) {
-        console.error('Error refreshing sheets', err);
-      } finally {
-        this.refreshing = false;
+      init() {
+        refreshIcons();
+        setInterval(() => {
+          if (!this.refreshing) this.refreshSheets();
+        }, 60000);
       }
-    },
-
-    init() {
-      // Initialize icons once
-      lucide.createIcons();
-
-      // Auto-refresh every 15s
-      setInterval(() => { this.refreshSheets() }, 15000);
     }
   }
-}
 </script>
 {% endblock %}
