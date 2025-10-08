@@ -1,89 +1,54 @@
-{% extends "base.html" %} {% block title %}Admin Dashboard{% endblock %} {%
-block content %}
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
 <div x-data="dashboard()" x-init="init()" class="flex h-screen bg-gray-100">
   <!-- Sidebars -->
-  {% include 'admin/components/mobile_sidebar.html' %} {% include
-  'admin/components/sidebar.html' %}
+  {% include 'admin/components/mobile_sidebar.html' %}
+  {% include 'admin/components/sidebar.html' %}
 
   <div class="flex-1 flex flex-col overflow-auto p-2">
-    {% include 'admin/components/topbar.html' %} {% include
-    'admin/components/kpi_cards.html' %}
+    {% include 'admin/components/topbar.html' %}
+    {% include 'admin/components/kpi_cards.html' %}
 
     <!-- Tabs -->
     <div class="w-full mt-2">
-      <!-- Sheet List -->
       {% include 'admin/components/sheet_list.html' %}
-
-      <!-- Add Sheet Form -->
       {% include 'admin/components/add_sheet_form.html' %}
     </div>
   </div>
 
-  <!-- Success/Error Popup (bottom-right toast) -->
+  <!-- Success/Error Popup -->
   {% include 'admin/components/popup.html' %}
 
   <!-- History Modal -->
-  <div
-    x-show="historySheet"
-    x-transition.opacity.duration.300ms
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-  >
-    <div
-      class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6 relative animate-fadeIn"
-    >
-      <!-- Close Button -->
-      <button
-        @click="historySheet=null"
-        class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
-      >
-        <i data-lucide="x" class="lucide w-6 h-6"></i>
+  <div x-show="historySheet"
+       x-transition.opacity.duration.300ms
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6 relative animate-fadeIn">
+      <button @click="historySheet=null" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors">
+        <i data-lucide="x" x-init="lucide.createIcons()" class="lucide w-6 h-6"></i>
       </button>
 
-      <!-- Modal Title -->
-      <h3
-        class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700"
-        x-text="historySheet ? historySheet.name + ' - History' : ''"
-      ></h3>
+      <h3 class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700"
+          x-text="historySheet ? historySheet.name + ' - History' : ''"></h3>
 
-      <!-- History Table -->
-      <template
-        x-if="historySheet && historySheet.history && historySheet.history.length > 0"
-      >
+      <template x-if="historySheet && historySheet.history && historySheet.history.length > 0">
         <div class="overflow-auto">
           <table class="w-full border-collapse rounded-lg shadow-sm">
             <thead>
-              <tr
-                class="bg-gradient-to-r from-green-600 to-green-500 text-white"
-              >
-                <th class="px-4 py-2 text-left text-sm font-semibold">
-                  Date Modified
-                </th>
-                <th class="px-4 py-2 text-left text-sm font-semibold">
-                  Modified By
-                </th>
+              <tr class="bg-gradient-to-r from-green-600 to-green-500 text-white">
+                <th class="px-4 py-2 text-left text-sm font-semibold">Date Modified</th>
+                <th class="px-4 py-2 text-left text-sm font-semibold">Modified By</th>
                 <th class="px-4 py-2 text-left text-sm font-semibold">Email</th>
               </tr>
             </thead>
             <tbody>
-              <template
-                x-for="h in historySheet.history.slice().sort((a,b)=>new Date(b.modified_dt)-new Date(a.modified_dt))"
-                :key="h.modified_dt"
-              >
-                <tr
-                  class="bg-white hover:bg-gray-50 transition-colors border-b last:border-b-0"
-                >
-                  <td
-                    class="px-4 py-2 text-sm text-green-700 font-semibold"
-                    x-text="new Date(h.modified_dt).toLocaleString()"
-                  ></td>
-                  <td
-                    class="px-4 py-2 text-sm text-gray-700"
-                    x-text="h.modified_by || '-'"
-                  ></td>
-                  <td
-                    class="px-4 py-2 text-sm text-gray-700"
-                    x-text="h.modified_email || '-'"
-                  ></td>
+              <template x-for="h in historySheet.history.slice().sort((a,b)=>new Date(b.modified_dt)-new Date(a.modified_dt))"
+                        :key="h.modified_dt">
+                <tr class="bg-white hover:bg-gray-50 transition-colors border-b last:border-b-0">
+                  <td class="px-4 py-2 text-sm text-green-700 font-semibold" x-text="new Date(h.modified_dt).toLocaleString()"></td>
+                  <td class="px-4 py-2 text-sm text-gray-700" x-text="h.modified_by || '-'"></td>
+                  <td class="px-4 py-2 text-sm text-gray-700" x-text="h.modified_email || '-'"></td>
                 </tr>
               </template>
             </tbody>
@@ -91,138 +56,121 @@ block content %}
         </div>
       </template>
 
-      <template
-        x-if="!historySheet || !historySheet.history || historySheet.history.length===0"
-      >
-        <div class="text-gray-400 text-center text-sm italic py-4">
-          No history available
-        </div>
+      <template x-if="!historySheet || !historySheet.history || historySheet.history.length === 0">
+        <div class="text-gray-400 text-center text-sm italic py-4">No history available</div>
       </template>
     </div>
   </div>
 </div>
 
 <script>
-      function dashboard() {
-        return {
-          sidebarOpen: false,
-          activeTab: 'list',
-          sheetName: '',
-          sheetUrl: '',
-          errorMessage: '',
-          sheets: {{ sheets | tojson | safe }} || [],
-          active_users: {{ active_users | default(0) }},
-          now: '{{ now }}',
+function dashboard() {
+  return {
+    sidebarOpen: false,
+    activeTab: 'list',
+    sheetName: '',
+    sheetUrl: '',
+    errorMessage: '',
+    sheets: {{ sheets | tojson | safe }} || [],
+    active_users: {{ active_users | default(0) }},
+    now: '{{ now }}',
 
-          // Submission Loader
-          submitting: false,
+    submitting: false,
+    refreshing: false,
 
-          // History Modal
-          historySheet: null,
-          openHistory(sheet) {
-            this.historySheet = sheet;
-          },
+    historySheet: null,
+    openHistory(sheet) { this.historySheet = sheet },
 
-          // Popup Notification (success/error only)
-          popupMessage: '',
-          popupType: 'success',
-          popupTitle: '',
-          showPopup(message, type='success', title='') {
-            this.popupMessage = message;
-            this.popupType = type;
-            this.popupTitle = title;
-            setTimeout(()=>this.popupMessage='',5000);
-          },
+    popupMessage: '',
+    popupType: 'success',
+    popupTitle: '',
+    showPopup(message, type='success', title='') {
+      this.popupMessage = message;
+      this.popupType = type;
+      this.popupTitle = title;
+      setTimeout(() => this.popupMessage = '', 5000);
+    },
 
-          // Add New Sheet with loader & spam prevention
-          async submitSheet() {
-            if (this.submitting) return; // prevent multiple clicks
-            this.submitting = true;
-            this.errorMessage = '';
-
-            try {
-              let formData = new FormData(this.$refs.addSheetForm);
-              let response = await fetch('/dashboard/online_sheets/add', { method: 'POST', body: formData });
-              let data = await response.json();
-
-              if (!response.ok) {
-                this.showPopup(data.detail || 'Error adding sheet','error');
-                return;
-              }
-
-              this.sheets.push({
-                id: data.id || crypto.randomUUID(),
-                name: this.sheetName,
-                url: this.sheetUrl,
-                last_modified_dt: data.last_modified || new Date().toISOString(),
-                modified_by: '{{ user.email }}',
-                modified_email: '{{ user.email }}',
-                tabs: data.tabs || []
-              });
-
-              this.sheetName = '';
-              this.sheetUrl = '';
-              this.showPopup('Sheet added successfully!', 'success', 'New Sheet');
-              this.activeTab='list';
-              lucide.createIcons();
-            } catch (err) {
-              console.error(err);
-              this.showPopup('Network error', 'error');
-            } finally {
-              this.submitting = false; // reset loader
-            }
-          },
-
-          // Refresh Sheets from server
-          async refreshSheets(){
-      if (this.refreshing) return; // prevent overlap
-      this.refreshing = true;
+    async submitSheet() {
+      if (this.submitting) return;
+      this.submitting = true;
+      this.errorMessage = '';
 
       try {
-        const response = await fetch('/dashboard/online_sheets/check_updates');
-        if (!response.ok) throw new Error('Failed to refresh');
-        const updates = await response.json();
+        const formData = new FormData(this.$refs.addSheetForm);
+        const response = await fetch('/dashboard/online_sheets/add', { method: 'POST', body: formData });
+        const data = await response.json();
 
-        if (updates.updated_sheets) {
-          updates.updated_sheets.forEach(s => {
-            const idx = this.sheets.findIndex(sheet => sheet.id === s.id);
-            if (idx === -1) {
-              this.sheets.push({
-                ...s,
-                last_modified_dt: s.last_modified_dt || '',
-                modified_by: s.modified_by || '',
-                modified_email: s.modified_email || '',
-                tabs: s.tabs || []
-              });
-            } else {
-              this.sheets[idx] = {
-                ...this.sheets[idx],
-                ...s,
-                tabs: s.tabs || []
-              };
-            }
-          });
+        if (!response.ok) {
+          this.showPopup(data.detail || 'Error adding sheet', 'error');
+          return;
         }
 
-        lucide.createIcons();
-      } catch(err){
-        console.error('Error refreshing sheets', err);
+        this.sheets.push({
+          id: data.id || crypto.randomUUID(),
+          name: this.sheetName,
+          url: this.sheetUrl,
+          last_modified_dt: data.last_modified || new Date().toISOString(),
+          modified_by: '{{ user.email }}',
+          modified_email: '{{ user.email }}',
+          tabs: data.tabs || []
+        });
+
+        this.sheetName = '';
+        this.sheetUrl = '';
+        this.showPopup('Sheet added successfully!', 'success', 'New Sheet');
+        this.activeTab = 'list';
+      } catch (err) {
+        console.error(err);
+        this.showPopup('Network error', 'error');
       } finally {
-        this.refreshing = false; // unlock after complete
+        this.submitting = false;
       }
     },
 
+    async refreshSheets() {
+      if (this.refreshing) return;
+      this.refreshing = true;
 
-          init(){
-    lucide.createIcons();
+      try {
+        const response = await fetch('/dashboard/online_sheets/check_updates_all');
+        if (!response.ok) throw new Error('Failed to refresh');
 
-    // Safe refresh with overlap protection
-    setInterval(() => {
-      if (!this.refreshing) this.refreshSheets();
-    }, 60000);
-  }
+        const data = await response.json();
+        if (data.updated_sheets) {
+          // Fully replace sheets array to avoid duplicates
+          this.sheets = data.updated_sheets.map(s => ({
+            ...s,
+            last_modified_dt: s.last_modified_dt || '',
+            modified_by: s.modified_by || '',
+            modified_email: s.modified_email || '',
+            tabs: s.tabs || []
+          }));
         }
-      }
-</script>
 
+        // Initialize icons for new elements only
+        this.$nextTick(() => {
+          this.sheets.forEach(sheet => {
+            const icons = document.querySelectorAll(`[data-lucide]`);
+            icons.forEach(icon => lucide.createIcons({ icons: [icon] }));
+          });
+        });
+
+      } catch(err) {
+        console.error('Error refreshing sheets', err);
+      } finally {
+        this.refreshing = false;
+      }
+    },
+
+    init() {
+      // Initialize icons once
+      lucide.createIcons();
+
+      // Auto-refresh every 15s
+      setInterval(() => { this.refreshSheets() }, 15000);
+    }
+  }
+}
+</script>
 {% endblock %}
