@@ -229,3 +229,71 @@ async def check_updates(user: dict = Depends(require_auth)):
         "updated_sheets": updated_sheets,
         "checked_at": datetime.utcnow().isoformat()
     })
+
+
+@router.get("/dashboard/online_sheets/check_updates_all", tags=["Sheets"], summary="Public check for all user sheets")
+async def check_all_user_sheets():
+    """Public endpoint to check updates for all users' Google Sheets."""
+    users_ref = db.collection("sheets").stream()
+    all_updates = []
+
+    for user_doc in users_ref:
+        uid = user_doc.id
+        user_sheets_ref = db.collection("sheets").document(uid).collection("user_sheets")
+        sheets_docs = user_sheets_ref.stream()
+
+        for doc in sheets_docs:
+            data = doc.to_dict()
+            url = data.get("url")
+            last_modified = data.get("last_modified")
+            status = data.get("status", "unknown")
+
+            meta = get_sheet_metadata(url)
+            reachable = is_sheet_reachable(url)
+            tabs = get_sheet_tabs(url)
+
+            updated = False
+            update_data = {
+                "last_checked": datetime.utcnow().isoformat(),
+                "status": "reachable" if reachable else "unreachable",
+                "tabs": tabs
+            }
+
+            if meta:
+                latest_modified = meta.get("modifiedTime")
+                if latest_modified and (not last_modified or latest_modified > last_modified):
+                    update_data.update({
+                        "last_modified": latest_modified,
+                        "last_modified_by": meta.get("lastUser"),
+                        "last_modified_email": meta.get("lastUserEmail")
+                    })
+                    history = data.get("history", [])
+                    history.append({
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "last_modified": latest_modified,
+                        "last_modified_by": meta.get("lastUser"),
+                        "last_modified_email": meta.get("lastUserEmail"),
+                        "status": "updated"
+                    })
+                    update_data["history"] = history
+                    updated = True
+
+            if updated or status != update_data["status"] or data.get("tabs", []) != tabs:
+                doc.reference.update(update_data)
+                all_updates.append({
+                    "uid": uid,
+                    "sheet_id": doc.id,
+                    "name": data.get("name"),
+                    "url": url,
+                    "modified_by": update_data.get("last_modified_by"),
+                    "modified_email": update_data.get("last_modified_email"),
+                    "status": update_data["status"],
+                    "last_modified_dt": update_data.get("last_modified"),
+                    "tabs": tabs
+                })
+
+    return JSONResponse({
+        "checked_at": datetime.utcnow().isoformat(),
+        "total_updates": len(all_updates),
+        "updated_sheets": all_updates
+    })
